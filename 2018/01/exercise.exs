@@ -23,7 +23,7 @@ defmodule Frequency do
   def first_frequency_reached_twice(freq_changes) do
     freq_changes
     |> String.split(", ")
-    |> find_frequency({0, [0]})
+    |> find_frequency({0, MapSet.new([0])})
   end
 
   ## Helpers
@@ -34,10 +34,10 @@ defmodule Frequency do
       Enum.reduce_while(frequency_changes, acc, fn digit, {current, past} ->
         next = current + String.to_integer(digit)
 
-        if next in past do
+        if MapSet.member?(past, next) do
           {:halt, next}
         else
-          {:cont, {next, [next | past]}}
+          {:cont, {next, MapSet.put(past, next)}}
         end
       end)
 
