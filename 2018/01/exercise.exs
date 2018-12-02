@@ -10,29 +10,20 @@ defmodule Frequency do
 
   def second_exercise, do: first_frequency_reached_twice(process_file())
 
-  @spec frequency(String.t()) :: integer
+  @spec frequency([integer]) :: integer
   def frequency(freq_changes) do
-    freq_changes
-    |> String.split(", ")
-    |> Enum.reduce(0, fn digit, acc ->
-      acc + String.to_integer(digit)
-    end)
+    Enum.sum(freq_changes)
   end
 
-  @spec first_frequency_reached_twice(String.t()) :: integer
-  def first_frequency_reached_twice(freq_changes) do
-    freq_changes
-    |> String.split(", ")
-    |> find_frequency({0, MapSet.new([0])})
-  end
+  @spec first_frequency_reached_twice([integer], {integer, MapSet.t()} | integer) :: integer
+  def first_frequency_reached_twice(frequency_changes, acc \\ {0, MapSet.new([0])})
 
-  ## Helpers
-  defp find_frequency(_, acc) when is_integer(acc), do: acc
+  def first_frequency_reached_twice(_, acc) when is_integer(acc), do: acc
 
-  defp find_frequency(frequency_changes, acc) do
+  def first_frequency_reached_twice(frequency_changes, acc) do
     result =
       Enum.reduce_while(frequency_changes, acc, fn digit, {current, past} ->
-        next = current + String.to_integer(digit)
+        next = current + digit
 
         if MapSet.member?(past, next) do
           {:halt, next}
@@ -41,14 +32,16 @@ defmodule Frequency do
         end
       end)
 
-    find_frequency(frequency_changes, result)
+    first_frequency_reached_twice(frequency_changes, result)
   end
 
   defp process_file do
     "input"
-    |> File.read!()
-    |> String.split()
-    |> Enum.join(", ")
+    |> File.stream!()
+    |> Stream.map(fn x ->
+      x |> String.trim() |> String.to_integer()
+    end)
+    |> Enum.to_list()
   end
 end
 
@@ -60,23 +53,29 @@ defmodule FrequencyTest do
   import Frequency
 
   test "should calculate frequency" do
-    assert frequency("+1, -2, +3, +1") == 3
-    assert frequency("+1, +1, +1") == 3
-    assert frequency("+1, +1, -2") == 0
-    assert frequency("-1, -2, -3") == -6
+    test_cases = [
+      {[1, -2, 3, 1], 3},
+      {[1, 1, 1], 3},
+      {[1, 1, -2], 0},
+      {[-1, -2, -3], -6}
+    ]
+
+    Enum.each(test_cases, fn {changes, expected} ->
+      assert frequency(changes) == expected
+    end)
   end
 
   test "should stop when a frequency is reached twice" do
     test_cases = [
-      {"+1, -2, +3, +1, +1, -2", 2},
-      {"+1, -1", 0},
-      {"+3, +3, +4, -2, -4", 10},
-      {"-6, +3, +8, +5, -6", 5},
-      {"+7, +7, -2, -7, -4", 14}
+      {[1, -2, 3, 1, 1, -2], 2},
+      {[1, -1], 0},
+      {[3, 3, 4, -2, -4], 10},
+      {[-6, 3, 8, 5, -6], 5},
+      {[7, 7, -2, -7, -4], 14}
     ]
 
-    Enum.each(test_cases, fn {changes, result} ->
-      assert first_frequency_reached_twice(changes) == result
+    Enum.each(test_cases, fn {changes, expected} ->
+      assert first_frequency_reached_twice(changes) == expected
     end)
   end
 end
