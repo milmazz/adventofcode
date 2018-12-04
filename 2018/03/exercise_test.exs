@@ -8,6 +8,6 @@ defmodule ExerciseTest do
   import Exercise
 
   test "should find the square inches" do
-    assert run(["#1 @ 1,3: 4x4", "#2 @ 3,1: 4x4", "#3 @ 5,5: 2x2"]) == 4
+    assert overlap(["#1 @ 1,3: 4x4", "#2 @ 3,1: 4x4", "#3 @ 5,5: 2x2"]) == 4
   end
 end
