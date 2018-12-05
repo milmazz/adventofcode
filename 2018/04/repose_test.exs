@@ -7,7 +7,7 @@ defmodule ReposeTest do
 
   import Repose
 
-  test "should find the sleepy guard" do
+  test "should apply first strategy" do
     input = """
     [1518-11-01 00:00] Guard #10 begins shift
     [1518-11-01 00:05] falls asleep
@@ -28,7 +28,31 @@ defmodule ReposeTest do
     [1518-11-05 00:55] wakes up
     """
 
-    assert input |> String.split("\n", trim: true) |> repose_records() == 240
+    assert input |> String.split("\n", trim: true) |> first_strategy() == 240
+  end
+
+  test "should apply second strategy" do
+    input = """
+    [1518-11-01 00:00] Guard #10 begins shift
+    [1518-11-01 00:05] falls asleep
+    [1518-11-01 00:25] wakes up
+    [1518-11-01 00:30] falls asleep
+    [1518-11-01 00:55] wakes up
+    [1518-11-01 23:58] Guard #99 begins shift
+    [1518-11-02 00:40] falls asleep
+    [1518-11-02 00:50] wakes up
+    [1518-11-03 00:05] Guard #10 begins shift
+    [1518-11-03 00:24] falls asleep
+    [1518-11-03 00:29] wakes up
+    [1518-11-04 00:02] Guard #99 begins shift
+    [1518-11-04 00:36] falls asleep
+    [1518-11-04 00:46] wakes up
+    [1518-11-05 00:03] Guard #99 begins shift
+    [1518-11-05 00:45] falls asleep
+    [1518-11-05 00:55] wakes up
+    """
+
+    assert input |> String.split("\n", trim: true) |> second_strategy() == 4455
   end
 
   test "should sort repose records" do
@@ -78,7 +102,7 @@ defmodule ReposeTest do
   test "should parse a record" do
     record = {~N[1518-11-01 00:00:00], "Guard #10 begins shift"}
     acc = {%{}, nil}
-    assert parse_records(record, acc) == {%{10 => %{}}, 10}
+    assert parse_records(record, acc) == {%{}, 10}
 
     acc1 = {%{10 => %{5 => 1, "total" => 1}}, 10}
     assert parse_records(record, acc1) == acc1

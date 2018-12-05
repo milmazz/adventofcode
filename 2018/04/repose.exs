@@ -1,15 +1,25 @@
 defmodule Repose do
-  def repose_records(file_stream) do
-    {parsed_records, _} =
-      file_stream
-      |> sort_records()
-      |> Enum.reduce({%{}, nil}, &parse_records/2)
+  def first_strategy(file_stream) do
+    parsed_records = process_records(file_stream)
 
     {guard_id, guard_info} = sleepy_guard(parsed_records)
 
     {sleepy_minute, _number_of_times} = lazy_minute(guard_info)
 
     guard_id * sleepy_minute
+  end
+
+  def second_strategy(file_stream) do
+    parsed_records = process_records(file_stream)
+
+    {id, min, _num} =
+      Enum.reduce(parsed_records, {nil, nil, 0}, fn {guard_id, guard_info}, {_, _, num} = acc ->
+        {sleepy_minute, number_of_times} = lazy_minute(guard_info)
+
+        if number_of_times > num, do: {guard_id, sleepy_minute, number_of_times}, else: acc
+      end)
+
+    id * min
   end
 
   def sleepy_guard(parsed_records) do
@@ -19,6 +29,15 @@ defmodule Repose do
   def lazy_minute(guard_info) do
     for({min, num} <- guard_info, is_integer(min), do: {min, num})
     |> Enum.max_by(fn {_min, num} -> num end)
+  end
+
+  def process_records(file_stream) do
+    {parsed_records, _} =
+      file_stream
+      |> sort_records()
+      |> Enum.reduce({%{}, nil}, &parse_records/2)
+
+    parsed_records
   end
 
   @doc """
@@ -41,7 +60,7 @@ defmodule Repose do
         begin_shift(acc, log)
 
       String.starts_with?(log, "falls asleep") ->
-        {put_in(acc[current_guard]["falls_asleep"], date.minute), current_guard}
+        falls_asleep(acc, current_guard, date)
 
       String.starts_with?(log, "wakes up") ->
         wakes_up(acc, date.minute, current_guard)
@@ -52,10 +71,14 @@ defmodule Repose do
     [guard | _] = String.split(log, ["Guard #", " "], trim: true, parts: 2)
     guard_id = String.to_integer(guard)
 
-    if Map.has_key?(acc, guard_id) do
-      {acc, guard_id}
+    {acc, guard_id}
+  end
+
+  defp falls_asleep(acc, current_guard, date) do
+    if Map.has_key?(acc, current_guard) do
+      {put_in(acc[current_guard]["falls_asleep"], date.minute), current_guard}
     else
-      {Map.put(acc, guard_id, %{}), guard_id}
+      {Map.put(acc, current_guard, %{"falls_asleep" => date.minute}), current_guard}
     end
   end
 
