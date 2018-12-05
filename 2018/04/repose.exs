@@ -5,19 +5,26 @@ defmodule Repose do
       |> sort_records()
       |> Enum.reduce({%{}, nil}, &parse_records/2)
 
-    {guard_id, guard_info} =
-      Enum.max_by(parsed_records, fn {_k, v} ->
-        v["total"] || 0
-      end)
+    {guard_id, guard_info} = sleepy_guard(parsed_records)
 
-    {sleepy_minute, _number_of_times} =
-      for({min, num} <- guard_info, is_integer(min), do: {min, num})
-      |> Enum.max_by(fn {_min, num} -> num end)
+    {sleepy_minute, _number_of_times} = lazy_minute(guard_info)
 
     guard_id * sleepy_minute
   end
 
-  defp sort_records(file_stream) do
+  def sleepy_guard(parsed_records) do
+    Enum.max_by(parsed_records, fn {_k, v} -> v["total"] || 0 end)
+  end
+
+  def lazy_minute(guard_info) do
+    for({min, num} <- guard_info, is_integer(min), do: {min, num})
+    |> Enum.max_by(fn {_min, num} -> num end)
+  end
+
+  @doc """
+  Sort repose records by date time
+  """
+  def sort_records(file_stream) do
     file_stream
     |> Stream.map(&String.split(&1, ["[", "] "], trim: true, parts: 2))
     |> Stream.map(fn [date | [log]] ->
@@ -28,7 +35,7 @@ defmodule Repose do
     end)
   end
 
-  defp parse_records({date, log}, {acc, current_guard}) do
+  def parse_records({date, log}, {acc, current_guard}) do
     cond do
       String.starts_with?(log, "Guard #") ->
         begin_shift(acc, log)
@@ -56,7 +63,7 @@ defmodule Repose do
     falls_asleep = Map.get(acc[current_guard], "falls_asleep")
 
     guard =
-      Enum.reduce(falls_asleep..wakes_up, acc[current_guard], fn min, guard ->
+      Enum.reduce(falls_asleep..(wakes_up - 1), acc[current_guard], fn min, guard ->
         guard
         |> Map.update(min, 1, &(&1 + 1))
         |> Map.update("total", 1, &(&1 + 1))
