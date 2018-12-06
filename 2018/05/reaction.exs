@@ -64,10 +64,6 @@ defmodule Reaction do
     |> Enum.min_by(fn {_unit, value} -> value end)
   end
 
-  # Compare polymer chain length
-  def compare_polymers({_, old_num}, {new, num}) when old_num > num, do: {new, num}
-  def compare_polymers(old, _), do: old
-
   # Remove the letter from the list based on the unit
   def remove_unit(binary, letter, acc \\ [])
 
