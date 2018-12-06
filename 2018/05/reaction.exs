@@ -20,7 +20,7 @@ defmodule Reaction do
 
   def reduce(word, acc) when word == acc, do: word
 
-  def reduce(word, _acc), do: reduce(seek_and_destroy(word), word)
+  def reduce(word, _acc), do: word |> seek_and_destroy() |> reduce(word)
 
   @doc """
   Destroy two adjacent units of the same type and opposite polarity.
