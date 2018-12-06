@@ -8,10 +8,7 @@ defmodule Reaction do
 
   # elixir -r reaction.exs -e "Reaction.second_part() |> IO.puts()"
   def second_part do
-    {_unit, number} =
-      read_file()
-      |> String.to_charlist()
-      |> shortest_polymer()
+    {_unit, number} = shortest_polymer(read_file())
 
     number
   end
@@ -48,19 +45,23 @@ defmodule Reaction do
 
   # Shortest polymer
   def shortest_polymer(input) do
-    Enum.reduce(?a..?z, {nil, :infinity}, fn unit, acc ->
-      current =
-        input
-        |> Enum.reduce([], fn letter, acc ->
-          remove_unit(unit, letter, acc)
-        end)
-        |> Enum.reverse()
-        |> to_string()
-        |> reduce()
-        |> String.length()
+    ?a..?z
+    |> Enum.reduce([], fn unit, acc ->
+      [
+        Task.async(fn ->
+          length =
+            input
+            |> remove_unit(unit)
+            |> reduce()
+            |> String.length()
 
-      compare_polymers(acc, {unit, current})
+          {unit, length}
+        end)
+        | acc
+      ]
     end)
+    |> Enum.map(fn task -> Task.await(task, 10_000) end)
+    |> Enum.min_by(fn {_unit, value} -> value end)
   end
 
   # Compare polymer chain length
@@ -68,13 +69,23 @@ defmodule Reaction do
   def compare_polymers(old, _), do: old
 
   # Remove the letter from the list based on the unit
-  def remove_unit(unit, letter, list) do
-    if letter == unit or letter == unit - 32 do
-      list
-    else
-      [letter | list]
-    end
+  def remove_unit(binary, letter, acc \\ [])
+
+  for lowercase <- ?a..?z do
+    uppercase = lowercase - 32
+
+    def remove_unit(<<unquote(lowercase), rest::binary>>, unquote(lowercase), acc),
+      do: remove_unit(rest, unquote(lowercase), acc)
+
+    def remove_unit(<<unquote(uppercase), rest::binary>>, unquote(lowercase), acc),
+      do: remove_unit(rest, unquote(lowercase), acc)
   end
+
+  def remove_unit(<<header, rest::binary>>, letter, acc),
+    do: remove_unit(rest, letter, [header | acc])
+
+  def remove_unit("", _, acc),
+    do: acc |> Enum.reverse() |> to_string()
 
   # Helper to read the input file
   defp read_file do

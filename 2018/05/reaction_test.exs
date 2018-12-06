@@ -20,6 +20,6 @@ defmodule ReactionTest do
   end
 
   test "should find the shortest polymer" do
-    assert shortest_polymer('dabAcCaCBAcCcaDA') == {?c, 4}
+    assert shortest_polymer("dabAcCaCBAcCcaDA") == {?c, 4}
   end
 end
